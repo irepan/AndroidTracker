@@ -54,6 +54,7 @@ public class LocationService extends Service implements
     private static final float minDistance=50.0f;
     private static final float minAccuracy=50.0f;
     private static final int maxTries=10;
+    private Location maxAccuracyLocation;
 
     private int tries=0;
 
@@ -68,20 +69,29 @@ public class LocationService extends Service implements
 
     private Realm realm;
 
+    public LocationService(){
+        super();
+        Log.e(TAG,"Constructor");
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.e(TAG,"onCreate Started");
         realm = Realm.getDefaultInstance();
         defaultUploadWebsite = getString(R.string.default_upload_website);
         sharedPreferences = this.getSharedPreferences("com.alcatrazstudios.apps.androidtracker.prefs", Context.MODE_PRIVATE);
+
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.e(TAG,"onStartCommand already started =" + currentlyProcessingLocation);
         // if we are currently trying to get a location and the alarm manager has called this again,
         // no need to start processing a new location.
         if (!currentlyProcessingLocation) {
             currentlyProcessingLocation = true;
+            maxAccuracyLocation = null;
             startTracking();
         }
 
@@ -89,7 +99,7 @@ public class LocationService extends Service implements
     }
 
     private void startTracking() {
-        Log.d(TAG, "startTracking");
+        Log.e(TAG, "startTracking");
 
         if (GooglePlayServicesUtil.isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS) {
 
@@ -104,6 +114,7 @@ public class LocationService extends Service implements
             }
         } else {
             Log.e(TAG, "unable to connect to google play services.");
+            stopSelf();
         }
     }
 
@@ -140,88 +151,12 @@ public class LocationService extends Service implements
         stopSelf();
     }
 
-    protected void sendLocationDataToWebsite(Location location) {
-        // formatted for mysql datetime format
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        dateFormat.setTimeZone(TimeZone.getDefault());
-        Date date = new Date(location.getTime());
-
-        SharedPreferences sharedPreferences = this.getSharedPreferences("com.alcatrazstudios.apps.androidtracker.prefs", Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-
-        float totalDistanceInMeters = sharedPreferences.getFloat("totalDistanceInMeters", 0f);
-
-        boolean firstTimeGettingPosition = sharedPreferences.getBoolean("firstTimeGettingPosition", true);
-
-        if (firstTimeGettingPosition) {
-            editor.putBoolean("firstTimeGettingPosition", false);
-        } else {
-            Location previousLocation = new Location("");
-            previousLocation.setLatitude(sharedPreferences.getFloat("previousLatitude", 0f));
-            previousLocation.setLongitude(sharedPreferences.getFloat("previousLongitude", 0f));
-
-            float distance = location.distanceTo(previousLocation);
-            totalDistanceInMeters += distance;
-            editor.putFloat("totalDistanceInMeters", totalDistanceInMeters);
-        }
-
-        editor.putFloat("previousLatitude", (float)location.getLatitude());
-        editor.putFloat("previousLongitude", (float)location.getLongitude());
-        editor.apply();
-
-        final RequestParams requestParams = new RequestParams();
-        requestParams.put("latitude", Double.toString(location.getLatitude()));
-        requestParams.put("longitude", Double.toString(location.getLongitude()));
-
-        Double speedInMilesPerHour = location.getSpeed()* 2.2369;
-        requestParams.put("speed",  Integer.toString(speedInMilesPerHour.intValue()));
-
-        try {
-            requestParams.put("date", URLEncoder.encode(dateFormat.format(date), "UTF-8"));
-        } catch (UnsupportedEncodingException e) {}
-
-        requestParams.put("locationmethod", location.getProvider());
-
-        if (totalDistanceInMeters > 0) {
-            requestParams.put("distance", String.format("%.1f", totalDistanceInMeters / 1609)); // in miles,
-        } else {
-            requestParams.put("distance", "0.0"); // in miles
-        }
-
-        requestParams.put("username", sharedPreferences.getString("userName", ""));
-        requestParams.put("phonenumber", sharedPreferences.getString("appID", "")); // uuid
-        requestParams.put("sessionid", sharedPreferences.getString("sessionID", "")); // uuid
-
-        Double accuracyInFeet = location.getAccuracy()* 3.28;
-        requestParams.put("accuracy",  Integer.toString(accuracyInFeet.intValue()));
-
-        Double altitudeInFeet = location.getAltitude() * 3.28;
-        requestParams.put("extrainfo",  Integer.toString(altitudeInFeet.intValue()));
-
-        requestParams.put("eventtype", "android");
-
-        Float direction = location.getBearing();
-        requestParams.put("direction",  Integer.toString(direction.intValue()));
-
-        final String uploadWebsite = sharedPreferences.getString("defaultUploadWebsite", defaultUploadWebsite);
-
-        LoopjHttpClient.get(uploadWebsite, requestParams, new AsyncHttpResponseHandler() {
-            @Override
-            public void onSuccess(int statusCode, cz.msebera.android.httpclient.Header[] headers, byte[] responseBody) {
-                LoopjHttpClient.debugLoopJ(TAG, "sendLocationDataToWebsite - success", uploadWebsite, requestParams, responseBody, headers, statusCode, null);
-                stopSelf();
-            }
-            @Override
-            public void onFailure(int statusCode, cz.msebera.android.httpclient.Header[] headers, byte[] errorResponse, Throwable e) {
-                LoopjHttpClient.debugLoopJ(TAG, "sendLocationDataToWebsite - failure", uploadWebsite, requestParams, errorResponse, headers, statusCode, e);
-                stopSelf();
-            }
-        });
-    }
-
     @Override
     public void onDestroy() {
         super.onDestroy();
+        Log.e(TAG,"onDestroy");
+        stopLocationUpdates();
+        stopSelf();
     }
 
     @Override
@@ -241,6 +176,7 @@ public class LocationService extends Service implements
                 //  sendLocationDataToWebsite(location);
                 insertLocationToDB(location);
             } else {
+
                 tries++;
                 if (tries>=maxTries){
                     stopSelf();
@@ -277,7 +213,7 @@ public class LocationService extends Service implements
      */
     @Override
     public void onConnected(Bundle bundle) {
-        Log.d(TAG, "onConnected");
+        Log.e(TAG, "onConnected");
 
         locationRequest = LocationRequest.create();
         locationRequest.setInterval(1000); // milliseconds
@@ -304,10 +240,14 @@ public class LocationService extends Service implements
 
         stopLocationUpdates();
         stopSelf();
+
     }
 
     @Override
     public void onConnectionSuspended(int i) {
         Log.e(TAG, "GoogleApiClient connection has been suspend");
     }
+
+
+
 }

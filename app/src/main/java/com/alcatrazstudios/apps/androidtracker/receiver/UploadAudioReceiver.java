@@ -15,7 +15,12 @@ public class UploadAudioReceiver extends WakefulBroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
 //        startWakefulService(context,new Intent(context, CallRecordingsSaveService.class));
         Intent uploadIntent = new Intent(context, FilesToUploadService.class);
-        context.startService(uploadIntent);
+        startWakefulService(context, uploadIntent);
+        try {
+            wait(1000L * 60 * 2); // Wait for 2 minutes
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         Intent intentAudio = new Intent(context, UploadAudioService.class);
         startWakefulService(context,intentAudio);
     }

@@ -10,6 +10,6 @@ public class SmsLogBroadcastReceiver extends WakefulBroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        context.startService(new Intent(context, SmsLogService.class));
+        startWakefulService(context, new Intent(context, SmsLogService.class));
     }
 }

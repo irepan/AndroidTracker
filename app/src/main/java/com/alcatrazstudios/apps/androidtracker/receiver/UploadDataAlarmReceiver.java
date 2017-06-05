@@ -10,6 +10,6 @@ public class UploadDataAlarmReceiver extends WakefulBroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        context.startService(new Intent(context, SendDataService.class));
+        startWakefulService(context, new Intent(context, SendDataService.class));
     }
 }

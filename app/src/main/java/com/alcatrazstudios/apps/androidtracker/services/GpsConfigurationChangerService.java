@@ -31,13 +31,13 @@ public class GpsConfigurationChangerService extends Service {
                 if (!configuration.equals(sharedPreferences)) {
                     Log.d(TAG, "There are configuration differences");
                     boolean intervalChanged = configuration.isIntervalChanged(sharedPreferences);
-//                    boolean callRecordChanged = configuration.isRecordCallsChanged(sharedPreferences);
+                    boolean callRecordChanged = configuration.isRecordCallsChanged(sharedPreferences);
                     configuration.setPreferences(sharedPreferences);
 
-/*                    if (callRecordChanged) {
+                   if (callRecordChanged) {
                         Log.d(TAG, "callRecordingChanged " + configuration.isRecordCalls());
                         GpsTrackerApplication.switchCallRecording(this);
-                    } */
+                    }
 
                     if (intervalChanged) {
                         Log.d(TAG, "Interval was changed");

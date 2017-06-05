@@ -54,6 +54,7 @@ public class SmsLogService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.e(TAG,"onCreate");
         realm = Realm.getDefaultInstance();
     }
 
@@ -64,6 +65,7 @@ public class SmsLogService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.e(TAG,"onStartCommand currently started = " + currentlyProcessingSms);
         if (!currentlyProcessingSms) {
             currentlyProcessingSms=true;
             try {

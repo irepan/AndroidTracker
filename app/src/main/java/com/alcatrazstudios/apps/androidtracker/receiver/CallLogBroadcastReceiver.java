@@ -12,6 +12,6 @@ public class CallLogBroadcastReceiver  extends WakefulBroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        context.startService(new Intent(context, CallLogService.class));
+        startWakefulService(context, new Intent(context, CallLogService.class));
     }
 }

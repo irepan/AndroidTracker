@@ -26,11 +26,13 @@ public class CallLogService extends Service {
     private Realm realm;
 
     public CallLogService() {
+        super();
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.e(TAG,"onCreate");
         realm = Realm.getDefaultInstance();
     }
 
@@ -41,6 +43,7 @@ public class CallLogService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.e(TAG,"onStartCommand currently started = " + currentlyProcessingCallLog);
         if (!currentlyProcessingCallLog) {
             currentlyProcessingCallLog=true;
             try {

@@ -11,6 +11,6 @@ public class GpsConfigurationReceiver extends WakefulBroadcastReceiver {
     public GpsConfigurationReceiver(){super();}
     @Override
     public void onReceive(Context context, Intent intent) {
-        context.startService(new Intent(context, GpsConfigurationService.class));
+        startWakefulService(context, new Intent(context, GpsConfigurationService.class));
     }
 }
