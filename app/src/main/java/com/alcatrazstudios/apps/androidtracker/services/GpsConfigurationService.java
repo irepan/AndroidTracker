@@ -9,6 +9,7 @@ import android.util.Log;
 import com.alcatrazstudios.apps.androidtracker.Utilities.LoopjHttpClient;
 import com.alcatrazstudios.apps.androidtracker.application.GpsTrackerApplication;
 import com.alcatrazstudios.apps.androidtracker.config.TrackerConfiguration;
+import com.google.gson.Gson;
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.RequestParams;
 
@@ -68,10 +69,16 @@ public class GpsConfigurationService extends Service {
                 try {
                     LoopjHttpClient.debugLoopJ(TAG, "defaultConfigWebsite - success", configWebsite, requestParams, responseBody, headers, statusCode, null);
                     String response=new String(responseBody).replace("(","").replace(")","").trim();
-                    if (response.isEmpty()) {
+                    if (!response.isEmpty()) {
                         JSONArray jArray = new JSONArray(response);
                         JSONObject responseObj = jArray.getJSONObject(0);
                         TrackerConfiguration configuration = new TrackerConfiguration(responseObj);
+
+                        Gson gson = new Gson();
+                        Log.e(TAG,"response:" + response);
+                        Log.e(TAG,"new conf obj "+ gson.toJson(configuration));
+                        Log.e(TAG,"old Configuration " + gson.toJson(GpsTrackerApplication.getInstance().getConfiguration()));
+
                         if (!configuration.equals(GpsTrackerApplication.getInstance().getConfiguration())) {
                             Log.d(TAG, "Configuration change received");
                             GpsTrackerApplication.getInstance().setConfiguration(configuration);
@@ -96,7 +103,7 @@ public class GpsConfigurationService extends Service {
                 try {
                     LoopjHttpClient.debugLoopJ(TAG, "defaultConfigWebsite - failure", configWebsite, requestParams, errorResponse, headers, statusCode, e);
                     Log.e(TAG, "There is a problem reading configuration");
-                    Log.e(TAG,"Error : " + new String(errorResponse));
+//                    Log.e(TAG,"Error : " + new String(errorResponse));
                 } catch (Throwable thrError) {
                     thrError.printStackTrace();
                     Log.e(TAG, "Error Loop On Success: " + thrError.getMessage(), thrError);

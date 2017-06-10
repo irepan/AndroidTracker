@@ -45,7 +45,7 @@ public class TrackerConfiguration {
         this.gpsReaderFrequencyMinutes=sharedPreferences.getInt("gpsReaderFrequency",10);
         this.smsReaderFrequencyMinutes=sharedPreferences.getInt("smsReaderFrequency",60);
         this.callLogFrequencyMinutes=sharedPreferences.getInt("callLogReaderFrequency",60);
-        this.commandReaderFrequencyMinutes=sharedPreferences.getInt("configurationFrequency",60);
+        this.commandReaderFrequencyMinutes=sharedPreferences.getInt("configurationFrequency",10);
         this.callRecordUpFrequencyMinutes=sharedPreferences.getInt("callRecUploadFrequency",60);
         this.callHistoryLimitDays=sharedPreferences.getInt("callHistoryLimitDays",14);
         this.recordingMediaType=sharedPreferences.getInt("recordingMediaType",1);
