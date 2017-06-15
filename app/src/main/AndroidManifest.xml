@@ -141,7 +141,9 @@
             android:enabled="true"
             android:exported="true" />
 
-        <activity android:name=".activities.PermissionsActivity"></activity>
+        <activity android:name=".activities.PermissionsActivity"
+            android:theme="@style/PermissionsTheme">
+        </activity>
     </application>
 
 </manifest>
