@@ -22,6 +22,7 @@ public class GpsTrackerEvent extends RealmObject {
     private Date date;
     @Required
     private Boolean uploaded;
+    private int uploadAttempts;
 
     public GpsTrackerEvent() {}
 
@@ -31,6 +32,7 @@ public class GpsTrackerEvent extends RealmObject {
         this.payLoad=payLoad;
         this.date=date;
         this.uploaded=false;
+        this.uploadAttempts =0;
     }
 
     public int getId() {
@@ -71,5 +73,13 @@ public class GpsTrackerEvent extends RealmObject {
 
     public void setUploaded(Boolean uploaded) {
         this.uploaded = uploaded;
+    }
+
+    public int getUploadAttempts() {
+        return uploadAttempts;
+    }
+
+    public void setUploadAttempts(int uploadAttempts) {
+        this.uploadAttempts = uploadAttempts;
     }
 }

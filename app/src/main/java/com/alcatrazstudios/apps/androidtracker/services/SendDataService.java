@@ -1,6 +1,7 @@
 package com.alcatrazstudios.apps.androidtracker.services;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.IBinder;
@@ -14,6 +15,9 @@ import com.alcatrazstudios.apps.androidtracker.receiver.GpsTrackerConnectivityRe
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.RequestParams;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 
 import io.realm.Realm;
@@ -22,6 +26,7 @@ import io.realm.RealmResults;
 public class SendDataService extends Service {
     private static final String TAG = "SendDataService";
     private boolean currentlySendingData=false;
+
     private Realm realm;
     private String phoneNo;
     private String googleAcct;
@@ -105,11 +110,13 @@ public class SendDataService extends Service {
                         try {
                             LoopjHttpClient.debugLoopJ(TAG, "sendLocationDataToWebsite - success", uploadWebsite, requestParams, responseBody, headers, statusCode, null);
                             Log.d(TAG, String.format("eventId=%d eventType=%d", event.getId(),event.getType()));
-                            if (!realm.isInTransaction()) {
-                                realm.beginTransaction();
+                            if (event.getType() != 1) {
+                                if (!realm.isInTransaction()) {
+                                    realm.beginTransaction();
+                                }
+                                event.deleteFromRealm();
+                                realm.commitTransaction();
                             }
-                            event.deleteFromRealm();
-                            realm.commitTransaction();
                         } catch (Throwable thrError) {
                             thrError.printStackTrace();
                             Log.e(TAG,"Error sending data OnSuccess:" + thrError.getMessage(),thrError);
@@ -121,7 +128,19 @@ public class SendDataService extends Service {
                     @Override
                     public void onFailure(int statusCode, cz.msebera.android.httpclient.Header[] headers, byte[] errorResponse, Throwable e) {
                         try {
-                        LoopjHttpClient.debugLoopJ(TAG, "sendLocationDataToWebsite - failure", uploadWebsite, requestParams, errorResponse, headers, statusCode, e);
+
+                            LoopjHttpClient.debugLoopJ(TAG, "sendLocationDataToWebsite - failure", uploadWebsite, requestParams, errorResponse, headers, statusCode, e);
+                            if (!realm.isInTransaction()) {
+                                realm.beginTransaction();
+                            }
+                            if (event.getUploadAttempts() >= 5) {
+                                event.deleteFromRealm();
+                                generateNoteOnSD("sendData.log",LoopjHttpClient.getUrlWithQueryString(uploadWebsite, requestParams));
+                            } else {
+                                event.setUploadAttempts(event.getUploadAttempts()+1);
+                                realm.copyToRealmOrUpdate(event);
+                            }
+                            realm.commitTransaction();
                         } catch (Throwable thrError) {
                             thrError.printStackTrace();
                             Log.e(TAG,"Error sending data OnSuccess:" + thrError.getMessage(),thrError);
@@ -155,6 +174,35 @@ public class SendDataService extends Service {
         } catch (Throwable thrError) {
             thrError.printStackTrace();
             Log.e(TAG,"Error clearSentData: " + thrError.getMessage(),thrError);
+        }
+    }
+
+    public void generateNoteOnSD(String sFileName, String sBody) {
+        FileWriter writer = null;
+        try {
+            File folder = new File(this.getExternalFilesDir(null), "/Logs");
+            if (!folder.exists()) {
+                folder.mkdirs();
+            }
+            File gpxfile = new File(folder, sFileName);
+            writer = new FileWriter(gpxfile);
+            writer.append(sBody);
+            writer.flush();
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.e(TAG,"Error writing file",e);
+        } catch (Throwable thrError) {
+            thrError.printStackTrace();
+            Log.e(TAG,"Error writing file",thrError);
+        } finally {
+            if (writer != null){
+                try {
+                    writer.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 }

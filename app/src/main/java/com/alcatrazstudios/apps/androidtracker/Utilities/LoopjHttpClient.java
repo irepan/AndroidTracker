@@ -41,4 +41,8 @@ public class LoopjHttpClient {
 
         }
     }
+
+    public static String getUrlWithQueryString(String url, RequestParams requestParams) {
+        return client.getUrlWithQueryString(false, url, requestParams);
+    }
 }
