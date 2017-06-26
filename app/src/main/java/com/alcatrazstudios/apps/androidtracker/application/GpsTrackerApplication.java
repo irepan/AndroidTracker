@@ -153,13 +153,24 @@ public class GpsTrackerApplication extends Application {
         context.startActivity(intent);
     }
 
-    public static void startAlarm(Context context,Class receiverClass,int interalMinutes){
-        AlarmManager alarmManager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+    public static void startAlarm(Context context,Class receiverClass,int intervalMinutes){
+/*        AlarmManager alarmManager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
         Intent intent=new Intent(context,receiverClass);
         PendingIntent pendingIntent=PendingIntent.getBroadcast(context,0,intent,0);
         alarmManager.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime(),
-                interalMinutes * 60000,
+                intervalMinutes * 60000,
+                pendingIntent); */
+        startAlarm(context, receiverClass ,intervalMinutes, 0);
+    }
+
+    public static void startAlarm(Context context,Class receiverClass,int intervalMinutes, int startFromNowMinutes){
+        AlarmManager alarmManager = (AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+        Intent intent=new Intent(context,receiverClass);
+        PendingIntent pendingIntent=PendingIntent.getBroadcast(context,0,intent,0);
+        alarmManager.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + (1000 * 60 * startFromNowMinutes),
+                intervalMinutes * 60000,
                 pendingIntent);
     }
 
@@ -182,7 +193,7 @@ public class GpsTrackerApplication extends Application {
 
         startAlarm(context, GpsConfigurationChangeReceiver.class,10);
 
-        startAlarm(context, UploadDataAlarmReceiver.class,1);
+        startAlarm(context, UploadDataAlarmReceiver.class,1,2);
 
         startAlarm(context, CallRecordsReceiver.class,10);
 

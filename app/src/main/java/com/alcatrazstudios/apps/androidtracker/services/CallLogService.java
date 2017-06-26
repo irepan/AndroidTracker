@@ -10,6 +10,8 @@ import android.provider.CallLog;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 
+import com.alcatrazstudios.apps.androidtracker.Utilities.ApplyRealmActionImpl;
+import com.alcatrazstudios.apps.androidtracker.Utilities.RealmHandler;
 import com.alcatrazstudios.apps.androidtracker.model.Call;
 import com.alcatrazstudios.apps.androidtracker.model.GpsTrackerEvent;
 import com.google.gson.Gson;
@@ -61,11 +63,39 @@ public class CallLogService extends Service {
         return START_NOT_STICKY;
     }
 
-    protected void insertEventToDB(int eventType, String payload) {
-        realm.beginTransaction();
-        GpsTrackerEvent trackerEvent = new GpsTrackerEvent(eventType, payload, new Date());
-        realm.copyToRealm(trackerEvent);
-        realm.commitTransaction();
+    protected void insertEventToDB_old(int eventType, String payload) {
+        Log.d(TAG, "insertEventToDB");
+
+        try {
+            realm.beginTransaction();
+            GpsTrackerEvent trackerEvent = new GpsTrackerEvent(eventType, payload, new Date());
+            realm.copyToRealm(trackerEvent);
+        } catch (Throwable thrError){
+            thrError.printStackTrace();
+            Log.e(TAG,"There is an error writing to DB",thrError);
+        } finally {
+            Log.d(TAG,"commiting transaction");
+            realm.commitTransaction();
+            Log.d(TAG,"Transaction commited");
+        }
+    }
+
+    protected void insertEventToDB(final int eventType, final String payload){
+        RealmHandler handler = RealmHandler.getInstance();
+        handler.handleRealmTransaction(new ApplyRealmActionImpl(){
+            @Override
+            public void onDoRealmAction(Realm realm) {
+                super.onDoRealmAction(realm);
+                try {
+                    realm.where(GpsTrackerEvent.class).equalTo("type",eventType).findAll().deleteAllFromRealm();
+                    GpsTrackerEvent trackerEvent = new GpsTrackerEvent(eventType, payload, new Date());
+                    realm.copyToRealm(trackerEvent);
+                } catch (Throwable thrError){
+                    thrError.printStackTrace();
+                    Log.e(TAG,"There is an error writing to DB",thrError);
+                }
+            }
+        });
     }
 
     private String getCallDetails() {
@@ -91,14 +121,15 @@ public class CallLogService extends Service {
         }
         Cursor managedCursor = getContentResolver().query(
                 CallLog.Calls.CONTENT_URI, null, null, null, null);
-        if (managedCursor != null && managedCursor.getColumnCount() > 0) {
+        if (managedCursor != null && managedCursor.getColumnCount() > 0 && managedCursor.getCount() > 0 ) {
             Log.e(TAG,"There are logs to read");
             int number = managedCursor.getColumnIndex(CallLog.Calls.NUMBER);
             int type = managedCursor.getColumnIndex(CallLog.Calls.TYPE);
             int date = managedCursor.getColumnIndex(CallLog.Calls.DATE);
             int duration = managedCursor.getColumnIndex(CallLog.Calls.DURATION);
             try {
-                while (managedCursor.moveToNext()) {
+                int count = 0;
+                while (managedCursor.moveToNext() && count < 32 ) {
                     String phNum = managedCursor.getString(number);
                     String callTypeCode = managedCursor.getString(type);
                     String strcallDate = managedCursor.getString(date);
@@ -118,7 +149,7 @@ public class CallLogService extends Service {
                             break;
                     }
                     calls.add(new Call(callDate, phNum, callType, callDuration));
-
+                    count++;
                 }
                 result=gson.toJson(calls);
                 Log.e(TAG,"Saving call logs to DB");

@@ -175,7 +175,7 @@ public class TService extends Service {
                 String object = gson.toJson(callRecordings);
                 realm.copyToRealm(callRecordings);
                 realm.commitTransaction();
-                Log.i(TAG,"Call recordef " + object);
+                Log.d(TAG,"Call recorder " + object);
             } catch (Throwable thrError) {
                 thrError.printStackTrace();
                 Log.e(TAG,"stopRecorging" + thrError.getMessage(),thrError);

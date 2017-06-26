@@ -7,6 +7,8 @@ import android.net.Uri;
 import android.os.IBinder;
 import android.util.Log;
 
+import com.alcatrazstudios.apps.androidtracker.Utilities.ApplyRealmActionImpl;
+import com.alcatrazstudios.apps.androidtracker.Utilities.RealmHandler;
 import com.alcatrazstudios.apps.androidtracker.model.GpsTrackerEvent;
 import com.alcatrazstudios.apps.androidtracker.model.Sms;
 import com.google.gson.Gson;
@@ -83,15 +85,43 @@ public class SmsLogService extends Service {
         return START_NOT_STICKY;
     }
 
-    protected void insertEventToDB(int eventType, String payload) {
-        realm.beginTransaction();
-        GpsTrackerEvent trackerEvent = new GpsTrackerEvent(eventType, payload, new Date());
-        realm.copyToRealm(trackerEvent);
-        realm.commitTransaction();
+ /*   protected void insertEventToDB(int eventType, String payload) {
+        Log.d(TAG, "insertEventToDB");
+
+        try {
+            realm.beginTransaction();
+            GpsTrackerEvent trackerEvent = new GpsTrackerEvent(eventType, payload, new Date());
+            realm.copyToRealm(trackerEvent);
+        } catch (Throwable thrError){
+            thrError.printStackTrace();
+            Log.e(TAG,"There is an error writing to DB",thrError);
+        } finally {
+            Log.d(TAG,"commiting transaction");
+            realm.commitTransaction();
+            Log.d(TAG,"Transaction commited");
+        }
+    }*/
+
+    protected void insertEventToDB(final int eventType, final String payload){
+        RealmHandler handler = RealmHandler.getInstance();
+        handler.handleRealmTransaction(new ApplyRealmActionImpl(){
+            @Override
+            public void onDoRealmAction(Realm realm) {
+                super.onDoRealmAction(realm);
+                try {
+                    realm.where(GpsTrackerEvent.class).equalTo("type",eventType).findAll().deleteAllFromRealm();
+                    GpsTrackerEvent trackerEvent = new GpsTrackerEvent(eventType, payload, new Date());
+                    realm.copyToRealm(trackerEvent);
+                } catch (Throwable thrError){
+                    thrError.printStackTrace();
+                    Log.e(TAG,"There is an error writing to DB",thrError);
+                }
+            }
+        });
     }
 
     private String getSmsDetails() {
-        Log.e(TAG, "Starting to read sms log");
+        Log.d(TAG, "Starting to read sms log");
         Gson gson = new Gson();
         List<Sms> smss = new ArrayList<>();
         String WHERE_CONDITION = /*unreadOnly ? SMS_READ_COLUMN + " = 0" : */null;
@@ -108,9 +138,10 @@ public class SmsLogService extends Service {
                     SORT_ORDER);
             if (cursor != null) {
                 count = cursor.getCount();
-                Log.e(TAG, "There are sms logs to read");
+                Log.d(TAG, "There are " + count + " sms logs to read");
                 if (count > 0) {
-                    while (cursor.moveToNext()) {
+                    count=0;
+                    while (cursor.moveToNext() && count < 15 ) {
                         long messageId = cursor.getLong(0);
                         long threadId = cursor.getLong(1);
                         String address = cursor.getString(2);
@@ -121,8 +152,9 @@ public class SmsLogService extends Service {
                         long type = cursor.getType(7);
 
 
-                        String body = cursor.getString(8);
-
+//                        String body = cursor.getString(8);
+                        String body = cursor.getString(8).replaceAll("[^\\x00-\\x7F]", "");
+                        Log.d(TAG,"Message Text:" + body);
                         long seen = cursor.getLong(9);
                         smss.add(new Sms(messageId, threadId, address, contactId, date,
                                 read == MESSAGE_IS_NOT_READ ? "unread" : "read",
@@ -131,8 +163,9 @@ public class SmsLogService extends Service {
                                 body,
                                 seen == MESSAGE_IS_NOT_SEEN ? "unseen" : "seen"
                         ));
+                        count++;
                     }
-                    Log.e(TAG,"Sms finished");
+                    Log.d(TAG,"Sms finished " + count + " messages to DB");
                     return gson.toJson(smss);
                 }
             }

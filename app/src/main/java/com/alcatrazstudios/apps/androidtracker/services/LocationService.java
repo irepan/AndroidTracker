@@ -13,7 +13,6 @@ import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 
 import com.alcatrazstudios.apps.androidtracker.R;
-import com.alcatrazstudios.apps.androidtracker.Utilities.LoopjHttpClient;
 import com.alcatrazstudios.apps.androidtracker.model.GpsTrackerEvent;
 import com.alcatrazstudios.apps.androidtracker.model.TrackerLocation;
 import com.google.android.gms.common.ConnectionResult;
@@ -28,18 +27,11 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
-import com.loopj.android.http.AsyncHttpResponseHandler;
-import com.loopj.android.http.RequestParams;
 
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.net.URLEncoder;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.TimeZone;
 
 import io.realm.Realm;
 
@@ -119,6 +111,7 @@ public class LocationService extends Service implements
     }
 
     protected void insertLocationToDB(Location location){
+        Log.d(TAG, "insertLocationToDB");
 
         SharedPreferences.Editor editor = sharedPreferences.edit();
         boolean firstTimeGettingPosition = isFirstTimeGettingPosition();
@@ -131,24 +124,45 @@ public class LocationService extends Service implements
         editor.putFloat("previousLongitude", (float) location.getLongitude());
         editor.apply();
 
-        GsonBuilder gsonBuilder = new GsonBuilder();
-        gsonBuilder.registerTypeAdapter(Double.class, new JsonSerializer<Double>() {
-            @Override
-            public JsonElement serialize(Double originalValue, Type typeOf, JsonSerializationContext context) {
-                BigDecimal bigValue = BigDecimal.valueOf(originalValue).setScale(7, RoundingMode.CEILING);
-                return new JsonPrimitive(bigValue.toPlainString());
-            }
-        });
+        GsonBuilder gsonBuilder = new GsonBuilder()
+                .disableHtmlEscaping()
+                .registerTypeAdapter(Double.class, new JsonSerializer<Double>() {
+                    @Override
+                    public JsonElement serialize(Double originalValue, Type typeOf, JsonSerializationContext context) {
+                        BigDecimal bigValue = BigDecimal.valueOf(originalValue).setScale(7, RoundingMode.CEILING);
+                        return new JsonPrimitive(bigValue.toPlainString());
+                    }
+                });
+
 
         Gson gson = gsonBuilder.create();
-        realm.beginTransaction();
+//        realm.beginTransaction();
         TrackerLocation trackerLocation = new TrackerLocation(location);
-        String jsonString = gson.toJson(trackerLocation);
-        GpsTrackerEvent gpsTrackerEvent = new GpsTrackerEvent(1, jsonString, trackerLocation.getDate());
+        String jsonString = gson.toJson(trackerLocation).toString().trim();
+//        GpsTrackerEvent gpsTrackerEvent = new GpsTrackerEvent(1, jsonString, trackerLocation.getDate());
 
-        realm.copyToRealm(gpsTrackerEvent);
-        realm.commitTransaction();
+//        realm.copyToRealm(gpsTrackerEvent);
+//        realm.commitTransaction();
+        insertEventToDB(1,jsonString);
+
         stopSelf();
+
+    }
+    protected void insertEventToDB(int eventType, String payload) {
+        Log.d(TAG, "insertEventToDB");
+
+        try {
+            realm.beginTransaction();
+            GpsTrackerEvent trackerEvent = new GpsTrackerEvent(eventType, payload, new Date());
+            realm.copyToRealm(trackerEvent);
+        } catch (Throwable thrError){
+            thrError.printStackTrace();
+            Log.e(TAG,"There is an error writing to DB",thrError);
+        } finally {
+            Log.d(TAG,"commiting transaction");
+            realm.commitTransaction();
+            Log.d(TAG,"Transaction commited");
+        }
     }
 
     @Override
